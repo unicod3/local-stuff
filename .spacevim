@@ -1,0 +1,118 @@
+" Comment the following line if you don't want Vim and NeoVim to share the
+" same plugin download directory.
+let g:spacevim_plug_home = '~/.vim/plugged'
+
+" Uncomment the following line to override the leader key. The default value is space key "<\Space>".
+" let g:spacevim_leader = "<\Space>"
+
+" Uncomment the following line to override the local leader key. The default value is comma ','.
+" let g:spacevim_localleader = ','
+
+" Enable the existing layers in space-vim.
+" Refer to https://github.com/liuchengxu/space-vim/blob/master/layers/LAYERS.md for all available layers.
+let g:spacevim_layers = [
+      \ 'fzf', 'better-defaults', 'programming', 'which-key', 'file-manager', 'go', 'git', 'ctrlp', 'syntax-checking', 'editing', 'python', 'spacevim', 'ycmd',
+      \ ]
+
+" Uncomment the following line if your terminal(-emulator) supports true colors.
+let g:spacevim_enable_true_color = 1
+
+" Uncomment the following if you have some nerd font installed.
+let g:spacevim_nerd_fonts = 1
+
+" If you want to have more control over the layer, try using Layer command.
+" if g:spacevim.gui
+"   Layer 'airline'
+" endif
+
+" Manage your own plugins.
+" Refer to https://github.com/junegunn/vim-plug for more detials.
+function! UserInit()
+
+  " Add your own plugin via Plug command.
+  Plug 'junegunn/seoul256.vim'
+  Plug 'mbbill/undotree'
+  Plug 'StanAngeloff/php.vim'
+  Plug 'stephpy/vim-php-cs-fixer'
+  Plug 'neomake/neomake'
+  Plug 'psliwka/vim-smoothie'
+  Plug 'tobyS/pdv'
+  Plug 'tobyS/vmustache'
+  Plug 'adoy/vim-php-refactoring-toolbox'
+  Plug 'algotech/ultisnips-php'
+  Plug 'SirVer/ultisnips'
+
+endfunction
+
+function! MyOnBattery()
+  if has('macunix')
+    return match(system('pmset -g batt'), "Now drawing from 'Battery Power'") != -1
+  elif has('unix')
+    return readfile('/sys/class/power_supply/AC/online') == ['0']
+  endif
+  return 0
+endfunction
+
+" Override the default settings from space-vim as well as adding extras
+function! UserConfig()
+
+  " Override the default settings.
+  " Uncomment the following line to disable relative number.
+  " set norelativenumber
+
+  " Adding extras.
+  " Uncomment the following line If you have installed the powerline fonts.
+  " It is good for airline layer.
+  " let g:airline_powerline_fonts = 1
+  au bufnewfile *.sh 0r ~/.vim/sh_header.temp
+
+  set backup
+  " Undo tree settings
+  nnoremap <F5> :UndotreeToggle<cr>
+  if has('persistent_undo')
+    set undodir=$HOME/.vim/.undo
+    set undofile
+  endif
+  set undolevels=1000         " Maximum number of changes that can be undone
+  set undoreload=10000        " Maximum number lines to save for undo on a buffer reload
+
+  " Highlight changed text
+  if !exists('g:undotree_HighlightChangedText')
+      let g:undotree_HighlightChangedText=1
+  endif
+
+  if !exists('g:undotree_SetFocusWhenToggle')
+      let g:undotree_SetFocusWhenToggle=1
+  endif
+
+  " Disable signature help
+  let g:ycm_disable_signature_help = 1
+
+  " vim-indent-guides
+  hi IndentGuidesOdd  ctermbg=black
+  hi IndentGuidesEven ctermbg=darkgrey
+
+  " ctags settings
+  set tags=./tags;,tags;
+
+  " php documentor
+  let g:pdv_template_dir=$HOME ."/.vim/plugged/pdv/templates"
+  nnoremap <leader>pd :call pdv#DocumentCurrentLine()<CR>
+  nnoremap <buffer> <C-p> :call pdv#DocumentWithSnip()<CR>
+
+	" Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
+	let g:UltiSnipsExpandTrigger="<c-k>"
+	let g:UltiSnipsJumpForwardTrigger="<c-b>"
+	let g:UltiSnipsJumpBackwardTrigger="<c-z>"
+
+	" If you want :UltiSnipsEdit to split your window.
+	let g:UltiSnipsEditSplit="vertical"
+
+
+	if MyOnBattery()
+		call neomake#configure#automake('w')
+	else
+		call neomake#configure#automake('nw', 1000)
+	endif
+
+endfunction
