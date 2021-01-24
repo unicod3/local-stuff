@@ -11,7 +11,7 @@ let g:spacevim_plug_home = '~/.vim/plugged'
 " Enable the existing layers in space-vim.
 " Refer to https://github.com/liuchengxu/space-vim/blob/master/layers/LAYERS.md for all available layers.
 let g:spacevim_layers = [
-      \ 'fzf', 'better-defaults', 'programming', 'which-key', 'file-manager', 'go', 'git', 'ctrlp', 'syntax-checking', 'editing', 'python', 'spacevim', 'ycmd',
+      \ 'fzf', 'better-defaults', 'programming', 'which-key', 'file-manager', 'go', 'git', 'ctrlp', 'syntax-checking', 'editing', 'python', 'spacevim',
       \ ]
 
 " Uncomment the following line if your terminal(-emulator) supports true colors.
@@ -19,6 +19,8 @@ let g:spacevim_enable_true_color = 1
 
 " Uncomment the following if you have some nerd font installed.
 let g:spacevim_nerd_fonts = 1
+
+set foldmethod=manual
 
 " If you want to have more control over the layer, try using Layer command.
 " if g:spacevim.gui
@@ -39,9 +41,21 @@ function! UserInit()
   Plug 'tobyS/pdv'
   Plug 'tobyS/vmustache'
   Plug 'adoy/vim-php-refactoring-toolbox'
-  Plug 'algotech/ultisnips-php'
-  Plug 'SirVer/ultisnips'
-
+  " Plug 'algotech/ultisnips-php'
+  " Plug 'SirVer/ultisnips'
+ 
+  Plug 'rust-lang/rust.vim'
+  Plug 'prabirshrestha/async.vim'
+  Plug 'prabirshrestha/asyncomplete.vim'
+  Plug 'prabirshrestha/asyncomplete-lsp.vim'
+  Plug 'prabirshrestha/vim-lsp'
+  Plug 'mattn/vim-lsp-settings'
+  "Plug 'felixfbecker/php-language-server', {'do': 'composer install && composer run-script parse-stubs'}
+  Plug 'dstein64/vim-startuptime'
+  Plug 'ryanolsonx/vim-lsp-javascript'
+  Plug 'ryanolsonx/vim-lsp-python'
+  Plug 'thomasfaingnaert/vim-lsp-snippets'
+  " Plug 'thomasfaingnaert/vim-lsp-ultisnips'
 endfunction
 
 function! MyOnBattery()
@@ -66,6 +80,9 @@ function! UserConfig()
   " let g:airline_powerline_fonts = 1
   au bufnewfile *.sh 0r ~/.vim/sh_header.temp
 
+  " Shortcut for eoIfErr
+  inoremap <leader>,e <C-c>:GoIfErr<CR>bbi
+
   set backup
   " Undo tree settings
   nnoremap <F5> :UndotreeToggle<cr>
@@ -75,6 +92,8 @@ function! UserConfig()
   endif
   set undolevels=1000         " Maximum number of changes that can be undone
   set undoreload=10000        " Maximum number lines to save for undo on a buffer reload
+  set redrawtime=30000        " The time in milliseconds for redrawing the display.
+  set mmp=5000
 
   " Highlight changed text
   if !exists('g:undotree_HighlightChangedText')
@@ -85,29 +104,72 @@ function! UserConfig()
       let g:undotree_SetFocusWhenToggle=1
   endif
 
-  " Disable signature help
-  let g:ycm_disable_signature_help = 1
-
   " vim-indent-guides
   hi IndentGuidesOdd  ctermbg=black
   hi IndentGuidesEven ctermbg=darkgrey
 
   " ctags settings
-  set tags=./tags;,tags;
+  "set tags=./tags;,tags;
+
+
+  " tab complation
 
   " php documentor
   let g:pdv_template_dir=$HOME ."/.vim/plugged/pdv/templates"
   nnoremap <leader>pd :call pdv#DocumentCurrentLine()<CR>
   nnoremap <buffer> <C-p> :call pdv#DocumentWithSnip()<CR>
 
-	" Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
-	let g:UltiSnipsExpandTrigger="<c-k>"
-	let g:UltiSnipsJumpForwardTrigger="<c-b>"
-	let g:UltiSnipsJumpBackwardTrigger="<c-z>"
+  nnoremap <leader>ld :LspDocumentDiagnostics<CR>
+  nnoremap <leader>lh :LspHover<CR>
+  nnoremap <leader>lt :LspDefinition<CR>
+  nnoremap <leader>lp :LspPeekDefinition<CR>
+  let g:lsp_signs_enabled = 1         " enable signs
+  let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
+  let g:lsp_signs_error = {'text': '✗'}
+  let g:lsp_signs_warning = {'text': '!!'}
+  let g:lsp_signs_hint = {'text': '!'}
 
+  if executable('rls')
+      au User lsp_setup call lsp#register_server({
+          \ 'name': 'rls',
+          \ 'cmd': {server_info->['rustup', 'run', 'stable', 'rls']},
+          \ 'workspace_config': {'rust': {'clippy_preference': 'on'}},
+          \ 'whitelist': ['rust'],
+          \ })
+  endif
+
+  
+	" Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
+	"let g:UltiSnipsExpandTrigger="<tab>"
+	"let g:UltiSnipsJumpForwardTrigger="<tab>"
+	"let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+  if executable('pyls')
+      " pip install python-language-server
+      au User lsp_setup call lsp#register_server({
+          \ 'name': 'pyls',
+          \ 'cmd': {server_info->['pyls']},
+          \ 'whitelist': ['python'],
+          \ })
+  endif
+  set completeopt+=preview
+
+
+  " PHP LSP setup
+  au User lsp_setup call lsp#register_server({
+    \ 'name': 'intelephense',
+    \ 'cmd': {server_info->['node', expand('/usr/local/lib/node_modules/intelephense/lib/intelephense.js'), '--stdio']},
+    \ 'initialization_options': {"storagePath": "/tmp/intelephense"},
+    \ 'whitelist': ['php'],
+    \ 'workspace_config': { 'intelephense': {
+    \   'files.associations': ['*.php'],
+    \ }},
+    \ })
+  function! s:check_back_space() abort
+      let col = col('.') - 1
+      return !col || getline('.')[col - 1]  =~ '\s'
+  endfunction
 	" If you want :UltiSnipsEdit to split your window.
 	let g:UltiSnipsEditSplit="vertical"
-
 
 	if MyOnBattery()
 		call neomake#configure#automake('w')
