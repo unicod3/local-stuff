@@ -8,6 +8,13 @@ let g:spacevim_plug_home = '~/.vim/plugged'
 " Uncomment the following line to override the local leader key. The default value is comma ','.
 " let g:spacevim_localleader = ','
 
+" Use main system registers for copy pasting
+" noremap <leader>y "*y
+" noremap <leader>p "*p
+" noremap <leader>Y "+y
+" noremap <leader>P "+p
+
+"
 " Enable the existing layers in space-vim.
 " Refer to https://github.com/liuchengxu/space-vim/blob/master/layers/LAYERS.md for all available layers.
 let g:spacevim_layers = [
@@ -15,13 +22,17 @@ let g:spacevim_layers = [
       \ ]
 
 " Uncomment the following line if your terminal(-emulator) supports true colors.
-let g:spacevim_enable_true_color = 1
+"let g:spacevim_enable_true_color = 1
+
+let g:signify_sign_add = "+"
+let g:signify_sign_delete_first_line = 'x'
+let g:signify_sign_change_delete = "x"
+set updatetime=100
 
 " Uncomment the following if you have some nerd font installed.
 let g:spacevim_nerd_fonts = 1
 
 set foldmethod=manual
-
 " If you want to have more control over the layer, try using Layer command.
 " if g:spacevim.gui
 "   Layer 'airline'
@@ -56,13 +67,15 @@ function! UserInit()
   Plug 'ryanolsonx/vim-lsp-python'
   Plug 'thomasfaingnaert/vim-lsp-snippets'
   " Plug 'thomasfaingnaert/vim-lsp-ultisnips'
-endfunction
+  Plug 'ActivityWatch/aw-watcher-vim'
+  endfunction
 
 function! MyOnBattery()
   if has('macunix')
     return match(system('pmset -g batt'), "Now drawing from 'Battery Power'") != -1
-  elif has('unix')
-    return readfile('/sys/class/power_supply/AC/online') == ['0']
+  endif
+  if has('unix')
+    return readfile('/sys/class/power_supply/ADP1/online') == ['0']
   endif
   return 0
 endfunction
@@ -77,19 +90,16 @@ function! UserConfig()
   " Adding extras.
   " Uncomment the following line If you have installed the powerline fonts.
   " It is good for airline layer.
-  " let g:airline_powerline_fonts = 1
-  au bufnewfile *.sh 0r ~/.vim/sh_header.temp
+  let g:airline_powerline_fonts = 1
+  "au bufnewfile *.sh 0r ~/.vim/sh_header.temp
 
-  " Shortcut for eoIfErr
-  inoremap <leader>,e <C-c>:GoIfErr<CR>bbi
 
   set backup
   " Undo tree settings
   nnoremap <F5> :UndotreeToggle<cr>
-  if has('persistent_undo')
-    set undodir=$HOME/.vim/.undo
-    set undofile
-  endif
+
+  set undodir=$HOME/.vim/.undo
+  set undofile
   set undolevels=1000         " Maximum number of changes that can be undone
   set undoreload=10000        " Maximum number lines to save for undo on a buffer reload
   set redrawtime=30000        " The time in milliseconds for redrawing the display.
@@ -110,6 +120,7 @@ function! UserConfig()
 
   " ctags settings
   "set tags=./tags;,tags;
+  "
 
 
   " tab complation
@@ -123,7 +134,9 @@ function! UserConfig()
   nnoremap <leader>lh :LspHover<CR>
   nnoremap <leader>lt :LspDefinition<CR>
   nnoremap <leader>lp :LspPeekDefinition<CR>
+  "nnoremap <leader>ge :GoIfErr<CR>bbA
   let g:lsp_signs_enabled = 1         " enable signs
+  let g:lsp_signature_help_enabled = 0
   let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
   let g:lsp_signs_error = {'text': '✗'}
   let g:lsp_signs_warning = {'text': '!!'}
@@ -145,19 +158,34 @@ function! UserConfig()
 	"let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
   if executable('pyls')
       " pip install python-language-server
+      "
       au User lsp_setup call lsp#register_server({
-          \ 'name': 'pyls',
-          \ 'cmd': {server_info->['pyls']},
-          \ 'whitelist': ['python'],
-          \ })
+           \ 'name': 'pyls',
+           \ 'cmd': {server_info->['pyls']},
+           \ 'whitelist': ['python'],
+           \ 'synchronization': {'didSave': 'false'},
+           \ })
   endif
   set completeopt+=preview
 
+  autocmd FileType go nmap <buffer> ge :GoIfErr<CR>bbA
+	if executable('gopls')
+			au User lsp_setup call lsp#register_server({
+					\ 'name': 'gopls',
+					\ 'cmd': {server_info->['gopls']},
+					\ 'whitelist': ['go'],
+					\ })
+      autocmd FileType go setlocal omnifunc=lsp#complete
+      "autocmd FileType go nmap <buffer> gd <plug>(lsp-definition)
+      "autocmd FileType go nmap <buffer> ,n <plug>(lsp-next-error)
+      "autocmd FileType go nmap <buffer> ,p <plug>(lsp-previous-error)
+      autocmd BufWritePre *.go LspDocumentFormatSync
+	endif
 
   " PHP LSP setup
   au User lsp_setup call lsp#register_server({
     \ 'name': 'intelephense',
-    \ 'cmd': {server_info->['node', expand('/usr/local/lib/node_modules/intelephense/lib/intelephense.js'), '--stdio']},
+    \ 'cmd': {server_info->['node', expand('/usr/lib/node_modules/intelephense/lib/intelephense.js'), '--stdio']},
     \ 'initialization_options': {"storagePath": "/tmp/intelephense"},
     \ 'whitelist': ['php'],
     \ 'workspace_config': { 'intelephense': {
@@ -170,11 +198,18 @@ function! UserConfig()
   endfunction
 	" If you want :UltiSnipsEdit to split your window.
 	let g:UltiSnipsEditSplit="vertical"
-
 	if MyOnBattery()
 		call neomake#configure#automake('w')
 	else
 		call neomake#configure#automake('nw', 1000)
 	endif
 
+  let g:pymode_lint = 1
+  let g:pymode_lint_on_write = 0
+
+  " Disable auto fixing on save
+  let g:ale_fix_on_save_ignore = 1
+  let g:ale_fix_on_save = 0
+
+  set encoding=UTF-8
 endfunction
